@@ -9,9 +9,7 @@ yarn upgrade-interactive -i --latest
 ### Direct Dependencies
 
 | library name (what).                        | description of its usage (why)                                    | ideal frequency of update (when) / status                            |
-| ------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------- |
-| @celo/contractkit                           | Celo coin integration                                             | monthly                                                              |
-| @celo/wallet-base                           | Celo coin integration                                             | monthly                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------- | 
 | @celo/wallet-ledger                         | Celo coin integration                                             | monthly                                                              |
 | @cosmjs/amino                               | Cosmos coin integration                                           | monthly                                                              |
 | @cosmjs/crypto                              | Cosmos coin integration                                           | monthly                                                              |

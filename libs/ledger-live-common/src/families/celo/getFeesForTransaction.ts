@@ -2,6 +2,7 @@ import { BigNumber } from "bignumber.js";
 import type { CeloAccount, Transaction } from "./types";
 import { celoKit } from "./api/sdk";
 import { getPendingStakingOperationAmounts, getVote } from "./logic";
+import { ethers } from "ethers";
 
 const getFeesForTransaction = async ({
   account,
@@ -43,29 +44,32 @@ const getFeesForTransaction = async ({
       : BigNumber.minimum(amount, totalSpendableBalance);
   }
 
-  let gas: number | null = null;
+  // ethers contracts return an ethers.BigNumber, not a bignumber.js BigNumber. but this is just an internal value.
+  let gas: ethers.BigNumber | null = null;
   if (transaction.mode === "lock") {
-    gas = await lockedGold
-      .lock()
-      .txo.estimateGas({ from: account.freshAddress, value: value.toFixed() });
+    gas = await lockedGold.estimateGas.lock({
+      from: account.freshAddress,
+      value: value.toString(16),
+    });
   } else if (transaction.mode === "unlock") {
     const lockedGold = await kit.contracts.getLockedGold();
 
-    gas = await lockedGold.unlock(value).txo.estimateGas({ from: account.freshAddress });
+    gas = await lockedGold.estimateGas.unlock(value, { from: account.freshAddress });
   } else if (transaction.mode === "withdraw") {
     const lockedGold = await kit.contracts.getLockedGold();
 
-    gas = await lockedGold.withdraw(index || 0).txo.estimateGas({ from: account.freshAddress });
+    gas = await lockedGold.estimateGas.withdraw(index || 0, { from: account.freshAddress });
   } else if (transaction.mode === "vote") {
     const election = await kit.contracts.getElection();
 
-    const vote = await election.vote(transaction.recipient, new BigNumber(value));
-
-    gas = await vote.txo.estimateGas({ from: account.freshAddress });
+    gas = await election.estimateGas.vote(transaction.recipient, new BigNumber(value), {
+      from: account.freshAddress,
+    });
   } else if (transaction.mode === "revoke") {
     const election = await kit.contracts.getElection();
     const accounts = await kit.contracts.getAccounts();
     const voteSignerAccount = await accounts.voteSignerToAccount(account.freshAddress);
+    // NOT  REAL METHOD
     const revokeTxs = await election.revoke(
       voteSignerAccount,
       transaction.recipient,
@@ -74,13 +78,12 @@ const getFeesForTransaction = async ({
 
     const revokeTx = revokeTxs.find(transactionObject => {
       return (
-        (transactionObject.txo as any)._method.name ===
-        (transaction.index === 0 ? "revokePending" : "revokeActive")
+        transactionObject.method === (transaction.index === 0 ? "revokePending" : "revokeActive")
       );
     });
     if (!revokeTx) return new BigNumber(0);
 
-    gas = await revokeTx.txo.estimateGas({ from: account.freshAddress });
+    gas = await kit.provider.estimateGas({ data: revokeTx.data, from: account.freshAddress });
   } else if (transaction.mode === "activate") {
     const election = await kit.contracts.getElection();
     const accounts = await kit.contracts.getAccounts();
@@ -88,28 +91,35 @@ const getFeesForTransaction = async ({
 
     const activates = await election.activate(voteSignerAccount);
 
-    const activate = activates.find(a => a.txo.arguments[0] === transaction.recipient);
+    const activate = activates.find(a => a.args[0] === transaction.recipient);
     if (!activate) return new BigNumber(0);
 
-    gas = await activate.txo.estimateGas({ from: account.freshAddress });
+    gas = await kit.provider.estimateGas({
+      from: account.freshAddress,
+      data: activate.data,
+      to: election.address,
+    });
   } else if (transaction.mode === "register") {
     const accounts = await kit.contracts.getAccounts();
 
-    gas = await accounts.createAccount().txo.estimateGas({ from: account.freshAddress });
+    gas = await accounts.estimateGas.createAccount({ from: account.freshAddress });
   } else {
-    const celoToken = await kit.contracts.getGoldToken();
+    const celoToken = await kit.contracts.getCeloToken();
 
     const celoTransaction = {
       from: account.freshAddress,
       to: celoToken.address,
-      data: celoToken.transfer(transaction.recipient, value.toFixed()).txo.encodeABI(),
+      data: celoToken.interface.encodeFunctionData("transfer", [
+        transaction.recipient,
+        value.toFixed(),
+      ]),
     };
 
-    gas = await kit.connection.estimateGasWithInflationFactor(celoTransaction);
+    gas = await kit.provider.estimateGas(celoTransaction);
   }
 
-  const gasPrice = new BigNumber(await kit.connection.gasPrice());
-  return gasPrice.times(gas);
+  const gasPrice = new BigNumber((await kit.provider.getGasPrice()).toString());
+  return gasPrice.times(gas?.toString() || 0);
 };
 
 export default getFeesForTransaction;

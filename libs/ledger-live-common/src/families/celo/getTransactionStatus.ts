@@ -8,11 +8,12 @@ import {
 } from "@ledgerhq/errors";
 import { BigNumber } from "bignumber.js";
 import { AccountBridge } from "@ledgerhq/types-live";
-import { isValidAddress } from "@celo/utils/lib/address";
 import { getPendingStakingOperationAmounts, getVote } from "./logic";
 import { CeloAccount, Transaction, TransactionStatus } from "./types";
 import { CeloAllFundsWarning } from "./errors";
 import { celoKit } from "./api/sdk";
+import { isAddress } from "ethers/lib/utils";
+
 
 const kit = celoKit();
 
@@ -101,7 +102,7 @@ export const getTransactionStatus: AccountBridge<
   if (transaction.mode === "send") {
     if (!transaction.recipient) {
       errors.recipient = new RecipientRequired();
-    } else if (!isValidAddress(transaction.recipient)) {
+    } else if (!isAddress(transaction.recipient)) {
       errors.recipient = new InvalidAddress("", {
         currencyName: account.currency.name,
       });

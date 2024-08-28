@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import { AccountBridge } from "@ledgerhq/types-live";
-import { isValidAddress } from "@celo/utils/lib/address";
+import { isAddress } from "ethers/lib/utils";
+
 import getFeesForTransaction from "./getFeesForTransaction";
 import { CeloAccount, Transaction } from "./types";
 
@@ -10,7 +11,7 @@ export const prepareTransaction: AccountBridge<
   Transaction,
   CeloAccount
 >["prepareTransaction"] = async (account, transaction) => {
-  if (transaction.recipient && !isValidAddress(transaction.recipient)) return transaction;
+  if (transaction.recipient && !isAddress(transaction.recipient)) return transaction;
 
   if (["send", "vote"].includes(transaction.mode) && !transaction.recipient) return transaction;
 

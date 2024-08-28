@@ -2,8 +2,9 @@ import { BigNumber } from "bignumber.js";
 import { Observable } from "rxjs";
 import { FeeNotLoaded } from "@ledgerhq/errors";
 import type { AccountBridge } from "@ledgerhq/types-live";
-import { rlpEncodedTx, encodeTransaction } from "@celo/wallet-base";
+import { encodeTransaction } from "@celo/wallet-base";
 import { tokenInfoByAddressAndChainId } from "@celo/wallet-ledger/lib/tokens";
+import { LedgerWallet } from "@celo/wallet-ledger";
 import { buildOptimisticOperation } from "./buildOptimisticOperation";
 import type { Transaction, CeloAccount } from "./types";
 import { withDevice } from "../../hw/deviceAccess";
@@ -28,10 +29,13 @@ export const signOperation: AccountBridge<Transaction, CeloAccount>["signOperati
             throw new FeeNotLoaded();
           }
 
+          // what is this?
           const celo = new CeloApp(transport);
+          const celoLedgerWallet = new LedgerWallet();
           const unsignedTransaction = await buildTransaction(account, transaction);
           const { chainId, to } = unsignedTransaction;
-          const rlpEncodedTransaction = rlpEncodedTx(unsignedTransaction);
+          const rlpEncodedTransaction =
+            await celoLedgerWallet.rlpEncodedTxForLedger(unsignedTransaction);
 
           const tokenInfo = tokenInfoByAddressAndChainId(to!, chainId!);
           if (tokenInfo) {

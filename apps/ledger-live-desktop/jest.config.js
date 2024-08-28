@@ -28,6 +28,7 @@ const moduleNameMapper = {
   "@polkadot/x-ws": "<rootDir>/__mocks__/x-ws.js",
 };
 
+
 const commonConfig = {
   testEnvironment: "jsdom",
   globals: {

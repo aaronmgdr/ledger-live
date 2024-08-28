@@ -12,7 +12,7 @@ const getAccountShape: GetAccountShape<CeloAccount> = async info => {
   const { address, currency, initialAccount, derivationMode } = info;
   const oldOperations = initialAccount?.operations || [];
   const election = await kit.contracts.getElection();
-  const electionConfig = await election.getConfig();
+  const maxNumGroupsVotedFor = await election.maxNumGroupsVotedFor();
   const lockedGold = await kit.contracts.getLockedGold();
 
   const accountId = encodeAccountId({
@@ -52,7 +52,7 @@ const getAccountShape: GetAccountShape<CeloAccount> = async info => {
       votes,
       electionAddress: election.address,
       lockedGoldAddress: lockedGold.address,
-      maxNumGroupsVotedFor: electionConfig.maxNumGroupsVotedFor,
+      maxNumGroupsVotedFor: maxNumGroupsVotedFor,
     },
   };
   return { ...shape, operations };
